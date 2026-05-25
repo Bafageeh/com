@@ -82,21 +82,7 @@ jobs:
               fi
 
               mkdir -p routes || true
-              cat > routes/api.php <<'PHP'
-<?php
-
-use Illuminate\Support\Facades\Route;
-
-Route::prefix('v1')->group(function () {
-    Route::get('/health', function () {
-        return response()->json([
-            'ok' => true,
-            'app' => 'COM API',
-            'version' => 'v1',
-        ]);
-    });
-});
-PHP
+              printf '%s\n' '<?php' '' 'use Illuminate\Support\Facades\Route;' '' "Route::prefix('v1')->group(function () {" "    Route::get('/health', function () {" '        return response()->json([' "            'ok' => true," "            'app' => 'COM API'," "            'version' => 'v1'," '        ]);' '    });' '});' > routes/api.php
 
               if [ -n "$PHP_BIN" ]; then
                 "$PHP_BIN" artisan key:generate --force || true
