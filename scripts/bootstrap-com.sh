@@ -11,6 +11,61 @@ log() {
   printf '\n[COM bootstrap] %s\n' "$1"
 }
 
+find_bin() {
+  local name="$1"
+  shift
+
+  if command -v "$name" >/dev/null 2>&1; then
+    command -v "$name"
+    return 0
+  fi
+
+  local candidate
+  for candidate in "$@"; do
+    if [ -x "$candidate" ]; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+COMPOSER_BIN="${COMPOSER_BIN:-}"
+if [ -z "$COMPOSER_BIN" ]; then
+  COMPOSER_BIN="$(find_bin composer /usr/local/bin/composer /opt/cpanel/composer/bin/composer /usr/bin/composer 2>/dev/null || true)"
+fi
+
+PHP_BIN="${PHP_BIN:-}"
+if [ -z "$PHP_BIN" ]; then
+  PHP_BIN="$(find_bin php /usr/local/bin/php /usr/bin/php /opt/cpanel/ea-php83/root/usr/bin/php /opt/cpanel/ea-php82/root/usr/bin/php /opt/cpanel/ea-php81/root/usr/bin/php 2>/dev/null || true)"
+fi
+
+NPM_BIN="${NPM_BIN:-}"
+if [ -z "$NPM_BIN" ]; then
+  NPM_BIN="$(find_bin npm /usr/local/bin/npm /usr/bin/npm 2>/dev/null || true)"
+fi
+
+NPX_BIN="${NPX_BIN:-}"
+if [ -z "$NPX_BIN" ]; then
+  NPX_BIN="$(find_bin npx /usr/local/bin/npx /usr/bin/npx 2>/dev/null || true)"
+fi
+
+if [ -z "$COMPOSER_BIN" ]; then
+  echo "Composer was not found. Install Composer or set COMPOSER_BIN to its full path."
+  exit 127
+fi
+
+if [ -z "$PHP_BIN" ]; then
+  echo "PHP was not found. Install PHP or set PHP_BIN to its full path."
+  exit 127
+fi
+
+log "Composer: $COMPOSER_BIN"
+log "PHP: $PHP_BIN"
+log "npm: ${NPM_BIN:-not found}"
+log "npx: ${NPX_BIN:-not found}"
+
 run_as_app_user() {
   sudo -u "$APP_USER" bash -lc "$1"
 }
@@ -36,7 +91,7 @@ chown -R "$APP_USER:$APP_USER" /home/$APP_USER/apps/.cache /home/$APP_USER/apps/
 if [ ! -d "$API_DIR" ]; then
   log "Creating Laravel API in com-api"
   chown -R "$APP_USER:$APP_USER" "$PROJECT_PATH"
-  run_as_app_user "cd /home/$APP_USER/apps/com && composer create-project laravel/laravel com-api"
+  run_as_app_user "cd /home/$APP_USER/apps/com && '$PHP_BIN' '$COMPOSER_BIN' create-project laravel/laravel com-api"
 else
   log "Laravel API already exists; skipping create-project"
 fi
@@ -54,9 +109,9 @@ if [ -d "$API_DIR" ]; then
     grep -q '^APP_URL=' .env && sed -i 's#^APP_URL=.*#APP_URL=https://com.pm.sa#' .env || echo 'APP_URL=https://com.pm.sa' >> .env
   fi
 
-  composer install --prefer-dist --no-interaction --optimize-autoloader
-  php artisan key:generate --force || true
-  php artisan storage:link || true
+  "$PHP_BIN" "$COMPOSER_BIN" install --prefer-dist --no-interaction --optimize-autoloader
+  "$PHP_BIN" artisan key:generate --force || true
+  "$PHP_BIN" artisan storage:link || true
 
   mkdir -p routes
   if [ -f routes/api.php ]; then
@@ -77,15 +132,19 @@ Route::prefix('v1')->group(function () {
 PHP
   fi
 
-  php artisan optimize:clear || true
+  "$PHP_BIN" artisan optimize:clear || true
 fi
 
 cd "$PROJECT_PATH"
 
 if [ ! -d "$MOBILE_DIR" ]; then
-  log "Creating Expo mobile app in com-mobile"
-  chown -R "$APP_USER:$APP_USER" "$PROJECT_PATH"
-  run_as_app_user "cd /home/$APP_USER/apps/com && EXPO_NO_TELEMETRY=1 XDG_CACHE_HOME=/home/$APP_USER/apps/.cache TMPDIR=/home/$APP_USER/apps/.tmp TMP=/home/$APP_USER/apps/.tmp TEMP=/home/$APP_USER/apps/.tmp npx create-expo-app com-mobile --yes"
+  if [ -z "$NPX_BIN" ]; then
+    log "npx was not found; skipping Expo app creation for now"
+  else
+    log "Creating Expo mobile app in com-mobile"
+    chown -R "$APP_USER:$APP_USER" "$PROJECT_PATH"
+    run_as_app_user "cd /home/$APP_USER/apps/com && EXPO_NO_TELEMETRY=1 XDG_CACHE_HOME=/home/$APP_USER/apps/.cache TMPDIR=/home/$APP_USER/apps/.tmp TMP=/home/$APP_USER/apps/.tmp TEMP=/home/$APP_USER/apps/.tmp '$NPX_BIN' create-expo-app com-mobile --yes"
+  fi
 else
   log "Expo mobile app already exists; skipping create-expo-app"
 fi
@@ -100,10 +159,14 @@ EOF
     cp .env.example .env
   fi
 
-  if [ -f package-lock.json ]; then
-    npm ci || npm install
+  if [ -n "$NPM_BIN" ]; then
+    if [ -f package-lock.json ]; then
+      "$NPM_BIN" ci || "$NPM_BIN" install
+    else
+      "$NPM_BIN" install
+    fi
   else
-    npm install
+    log "npm was not found; skipping mobile dependency install"
   fi
 fi
 
