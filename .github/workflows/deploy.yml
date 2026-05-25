@@ -150,10 +150,17 @@ jobs:
             if [ -f "$PROJECT_PATH/com-mobile/package.json" ]; then
               cd "$PROJECT_PATH/com-mobile" || true
               if [ -n "$NPM_BIN" ]; then
+                rm -rf node_modules package-lock.json .expo node_modules/.cache 2>/dev/null || true
                 "$NPM_BIN" install || true
               fi
             else
               echo "com-mobile package.json is missing; skipping mobile install"
+            fi
+
+            cd "$PROJECT_PATH" || true
+            if [ -f scripts/start-com-expo.sh ]; then
+              chmod +x scripts/start-com-expo.sh || true
+              COM_MOBILE_DIR="$PROJECT_PATH/com-mobile" COM_EXPO_PORT="8081" COM_EXPO_HOSTNAME="com.pm.sa" COM_APP_USER="pmsa" bash scripts/start-com-expo.sh || true
             fi
 
             cd "$PROJECT_PATH" || true
