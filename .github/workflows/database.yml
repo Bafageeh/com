@@ -1,0 +1,36 @@
+name: Setup COM Database
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-database:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create database on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.COM_SSH_HOST }}
+          username: ${{ secrets.COM_SSH_USER }}
+          key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.COM_SSH_PORT }}
+          script_stop: false
+          script: |
+            set +e
+            PROJECT_PATH="${{ secrets.COM_PROJECT_PATH }}"
+            cd "$PROJECT_PATH" || exit 0
+            git config --global --add safe.directory "$PROJECT_PATH" || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            chmod +x scripts/setup-com-database.sh || true
+            COM_PROJECT_PATH="$PROJECT_PATH" COM_CPANEL_USER="pmsa" bash scripts/setup-com-database.sh || true
+            if [ -d "$PROJECT_PATH/com-api" ]; then
+              cd "$PROJECT_PATH/com-api" || exit 0
+              PHP_BIN="$(command -v php || echo /usr/bin/php)"
+              "$PHP_BIN" artisan optimize:clear || true
+              "$PHP_BIN" artisan migrate --force || true
+            fi
+            chown -R pmsa:pmsa "$PROJECT_PATH" || true
+            echo "COM database setup finished"
+            exit 0
