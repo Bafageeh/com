@@ -82,7 +82,32 @@ jobs:
               fi
 
               mkdir -p routes || true
-              printf '%s\n' '<?php' '' 'use Illuminate\Support\Facades\Route;' '' "Route::prefix('v1')->group(function () {" "    Route::get('/health', function () {" '        return response()->json([' "            'ok' => true," "            'app' => 'COM API'," "            'version' => 'v1'," '        ]);' '    });' '});' > routes/api.php || true
+              printf '%s\n' '<?php' '' 'use Illuminate\Support\Facades\Route;' '' "Route::get('/health', function () {" '    return response()->json([' "        'ok' => true," "        'app' => 'COM API'," "        'version' => 'v1'," '    ]);' '});' > routes/api.php || true
+
+              if [ -f bootstrap/app.php ]; then
+                cp bootstrap/app.php bootstrap/app.php.bak.$(date +%Y%m%d%H%M%S) || true
+                cat > bootstrap/app.php <<'PHP'
+<?php
+
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Foundation\Configuration\Middleware;
+
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        commands: __DIR__.'/../routes/console.php',
+        health: '/up',
+    )
+    ->withMiddleware(function (Middleware $middleware): void {
+        //
+    })
+    ->withExceptions(function (Exceptions $exceptions): void {
+        //
+    })->create();
+PHP
+              fi
 
               if [ -n "$PHP_BIN" ]; then
                 "$PHP_BIN" artisan key:generate --force || true
@@ -91,6 +116,7 @@ jobs:
                 "$PHP_BIN" artisan config:clear || true
                 "$PHP_BIN" artisan route:clear || true
                 "$PHP_BIN" artisan view:clear || true
+                "$PHP_BIN" artisan route:list | grep health || true
 
                 if grep -q '^DB_DATABASE=' .env 2>/dev/null; then
                   "$PHP_BIN" artisan migrate --force || true
