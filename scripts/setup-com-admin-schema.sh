@@ -12,8 +12,16 @@ if [ ! -d "$API_DIR" ]; then
   exit 0
 fi
 
+if [ -f "$PROJECT_PATH/scripts/setup-com-database.sh" ]; then
+  log "Ensuring MySQL database and .env"
+  COM_PROJECT_PATH="$PROJECT_PATH" COM_CPANEL_USER="$APP_USER" bash "$PROJECT_PATH/scripts/setup-com-database.sh" || true
+fi
+
 cd "$API_DIR" || exit 0
 mkdir -p database/migrations routes app/Http/Controllers/Api
+
+log "Current DB settings"
+grep -E '^(DB_CONNECTION|DB_HOST|DB_PORT|DB_DATABASE|DB_USERNAME)=' .env 2>/dev/null || true
 
 log "Writing migration"
 cat > database/migrations/2026_05_25_010000_create_com_admin_tables.php <<'PHP'
@@ -225,9 +233,9 @@ PHP
 fi
 
 log "Running migrate"
-"$PHP_BIN" artisan optimize:clear || true
 "$PHP_BIN" artisan config:clear || true
 "$PHP_BIN" artisan route:clear || true
+"$PHP_BIN" artisan view:clear || true
 "$PHP_BIN" artisan migrate --force || true
 "$PHP_BIN" artisan route:list | grep -E 'health|dashboard|hostings|expenses|hetzner|cpanel' || true
 
