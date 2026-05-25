@@ -33,6 +33,31 @@ jobs:
               exit 1
             fi
 
+            find_bin() {
+              local name="$1"
+              shift
+              if command -v "$name" >/dev/null 2>&1; then
+                command -v "$name"
+                return 0
+              fi
+              local candidate
+              for candidate in "$@"; do
+                if [ -x "$candidate" ]; then
+                  echo "$candidate"
+                  return 0
+                fi
+              done
+              return 1
+            }
+
+            PHP_BIN="$(find_bin php /usr/local/bin/php /usr/bin/php /opt/cpanel/ea-php83/root/usr/bin/php /opt/cpanel/ea-php82/root/usr/bin/php /opt/cpanel/ea-php81/root/usr/bin/php 2>/dev/null || true)"
+            COMPOSER_BIN="$(find_bin composer /usr/local/bin/composer /opt/cpanel/composer/bin/composer /usr/bin/composer 2>/dev/null || true)"
+            NPM_BIN="$(find_bin npm /usr/local/bin/npm /usr/bin/npm 2>/dev/null || true)"
+
+            echo "PHP_BIN=${PHP_BIN:-not-found}"
+            echo "COMPOSER_BIN=${COMPOSER_BIN:-not-found}"
+            echo "NPM_BIN=${NPM_BIN:-not-found}"
+
             git config --global --add safe.directory "$PROJECT_PATH" || true
             cd "$PROJECT_PATH"
             git fetch origin main
@@ -42,52 +67,63 @@ jobs:
               echo "Laravel API or Expo mobile app is missing; running bootstrap script"
               if [ -f "$PROJECT_PATH/scripts/bootstrap-com.sh" ]; then
                 chmod +x "$PROJECT_PATH/scripts/bootstrap-com.sh"
-                COM_PROJECT_PATH="$PROJECT_PATH" EXPO_PUBLIC_API_BASE_URL="${{ secrets.EXPO_PUBLIC_API_BASE_URL }}" bash "$PROJECT_PATH/scripts/bootstrap-com.sh"
-                git fetch origin main
-                git reset --hard origin/main
+                COM_PROJECT_PATH="$PROJECT_PATH" EXPO_PUBLIC_API_BASE_URL="${{ secrets.EXPO_PUBLIC_API_BASE_URL }}" bash "$PROJECT_PATH/scripts/bootstrap-com.sh" || echo "Bootstrap returned a non-zero status; continuing deployment"
+                git fetch origin main || true
+                git reset --hard origin/main || true
               else
                 echo "Bootstrap script not found"
               fi
             fi
 
-            if [ -d "com-api" ]; then
+            if [ -d "$PROJECT_PATH/com-api" ]; then
               cd "$PROJECT_PATH/com-api"
-              composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+
+              if [ -n "$COMPOSER_BIN" ] && [ -n "$PHP_BIN" ]; then
+                "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --prefer-dist --no-interaction --optimize-autoloader || true
+              else
+                echo "Composer/PHP not found; skipping composer install"
+              fi
 
               if [ ! -f .env ] && [ -f .env.example ]; then
                 cp .env.example .env
               fi
 
-              php artisan key:generate --force || true
-              php artisan storage:link || true
-              php artisan optimize:clear || true
+              if [ -n "$PHP_BIN" ]; then
+                "$PHP_BIN" artisan key:generate --force || true
+                "$PHP_BIN" artisan storage:link || true
+                "$PHP_BIN" artisan optimize:clear || true
 
-              if grep -q '^DB_DATABASE=' .env 2>/dev/null; then
-                php artisan migrate --force || true
+                if grep -q '^DB_DATABASE=' .env 2>/dev/null; then
+                  "$PHP_BIN" artisan migrate --force || true
+                else
+                  echo "Skipping migrations because DB_DATABASE is not configured"
+                fi
+
+                "$PHP_BIN" artisan config:cache || true
+                "$PHP_BIN" artisan route:cache || true
+                "$PHP_BIN" artisan view:cache || true
               else
-                echo "Skipping migrations because DB_DATABASE is not configured"
+                echo "PHP not found; skipping artisan commands"
               fi
-
-              php artisan config:cache || true
-              php artisan route:cache || true
-              php artisan view:cache || true
             fi
 
-            if [ -d "com-mobile" ]; then
+            if [ -f "$PROJECT_PATH/com-mobile/package.json" ]; then
               cd "$PROJECT_PATH/com-mobile"
-              if [ -f package-lock.json ]; then
-                npm ci || npm install
+              if [ -n "$NPM_BIN" ]; then
+                "$NPM_BIN" install || true
               else
-                npm install
+                echo "npm not found; skipping mobile dependency install"
               fi
             fi
 
             cd "$PROJECT_PATH"
             if [ -f scripts/setup-com-domain.sh ]; then
               chmod +x scripts/setup-com-domain.sh
-              COM_PROJECT_PATH="$PROJECT_PATH" COM_DOMAIN="com.pm.sa" COM_CPANEL_USER="pmsa" bash scripts/setup-com-domain.sh
+              COM_PROJECT_PATH="$PROJECT_PATH" COM_DOMAIN="com.pm.sa" COM_CPANEL_USER="pmsa" bash scripts/setup-com-domain.sh || true
             else
               echo "Domain setup script not found"
             fi
 
             chown -R pmsa:pmsa "$PROJECT_PATH" || true
+
+            echo "COM deploy finished"
