@@ -70,14 +70,12 @@ jobs:
               fi
             fi
 
-            chown -R pmsa:pmsa "$PROJECT_PATH" || true
-
-            echo "Running cPanel AutoSSL for user pmsa"
-            if [ -x /usr/local/cpanel/bin/autossl_check ]; then
-              /usr/local/cpanel/bin/autossl_check --user pmsa || true
+            cd "$PROJECT_PATH"
+            if [ -f scripts/setup-com-domain.sh ]; then
+              chmod +x scripts/setup-com-domain.sh
+              COM_PROJECT_PATH="$PROJECT_PATH" COM_DOMAIN="com.pm.sa" COM_CPANEL_USER="pmsa" bash scripts/setup-com-domain.sh
             else
-              echo "AutoSSL command not found"
+              echo "Domain setup script not found"
             fi
 
-            echo "Checking HTTPS for com.pm.sa"
-            curl -I --max-time 20 https://com.pm.sa || true
+            chown -R pmsa:pmsa "$PROJECT_PATH" || true
