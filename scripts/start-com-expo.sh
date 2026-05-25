@@ -23,12 +23,12 @@ chown -R pmsa:pmsa "$APP_DIR" || true
 lsof -ti:"$PORT" | xargs -r kill -9 || true
 pkill -f "expo.*$PORT" 2>/dev/null || true
 pkill -f "metro.*$PORT" 2>/dev/null || true
+pkill -f "node.*$PORT" 2>/dev/null || true
 
 cd "$APP_DIR"
 
-if [ ! -d node_modules ]; then
-  sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && npm install"
-fi
+rm -rf .expo node_modules/.cache 2>/dev/null || true
+sudo -u "$APP_USER" bash -lc "cd '$APP_DIR' && npm install"
 
 sudo -u "$APP_USER" bash -lc "
 cd '$APP_DIR' && \
@@ -46,4 +46,4 @@ sleep 4
 
 echo "Expo started on port $PORT"
 echo "Log: $LOG_FILE"
-tail -80 "$LOG_FILE" || true
+tail -120 "$LOG_FILE" || true
