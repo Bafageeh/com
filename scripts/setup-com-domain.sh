@@ -29,13 +29,47 @@ find_docroot() {
     "/home/$CPANEL_USER/public_html/$DOMAIN" \
     "/home/$CPANEL_USER/public_html/com" \
     "/home/$CPANEL_USER/public_html/apps/com"; do
-    if [ -d "$candidate" ]; then
+    if [ -d "$candidate" ] || [ -L "$candidate" ]; then
       echo "$candidate"
       return 0
     fi
   done
 
   echo "/home/$CPANEL_USER/public_html/$DOMAIN"
+}
+
+write_laravel_htaccess() {
+  local target_dir="$1"
+  cat > "$target_dir/.htaccess" <<'HTACCESS'
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+DirectoryIndex index.php index.html
+HTACCESS
+}
+
+write_fallback_htaccess() {
+  local target_dir="$1"
+  cat > "$target_dir/.htaccess" <<'HTACCESS'
+Options -Indexes
+DirectoryIndex index.html index.php
+HTACCESS
 }
 
 DOCROOT="$(find_docroot)"
@@ -54,6 +88,7 @@ mkdir -p "$PROJECT_PATH"
 if [ -d "$LARAVEL_PUBLIC" ] && [ -f "$LARAVEL_PUBLIC/index.php" ]; then
   TARGET="$LARAVEL_PUBLIC"
   log "Laravel public directory found: $TARGET"
+  write_laravel_htaccess "$TARGET"
 else
   TARGET="$FALLBACK_PUBLIC"
   log "Laravel public directory not found yet; using fallback public directory: $TARGET"
@@ -81,16 +116,8 @@ else
 </body>
 </html>
 HTML
+  write_fallback_htaccess "$TARGET"
 fi
-
-cat > "$TARGET/.htaccess" <<'HTACCESS'
-Options -Indexes
-DirectoryIndex index.php index.html
-
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-</IfModule>
-HTACCESS
 
 mkdir -p "$(dirname "$DOCROOT")"
 
@@ -131,5 +158,6 @@ fi
 
 log "HTTPS check"
 curl -k -I --max-time 20 "https://$DOMAIN" || true
+curl -k -I --max-time 20 "https://$DOMAIN/api/v1/health" || true
 
 log "Done"
