@@ -53,6 +53,14 @@ find_mysql() {
   return 1
 }
 
+make_safe_password() {
+  tr -dc 'A-Za-z0-9' </dev/urandom | head -c 28
+}
+
+is_safe_password() {
+  printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]{16,}$'
+}
+
 if [ ! -d "$API_DIR" ]; then
   log "API directory not found yet: $API_DIR"
   exit 0
@@ -63,24 +71,22 @@ if [ ! -f "$ENV_FILE" ] && [ -f "$API_DIR/.env.example" ]; then
 fi
 
 EXISTING_PASSWORD="$(get_env_value DB_PASSWORD || true)"
-if [ -n "${COM_DB_PASSWORD:-}" ]; then
+if [ -n "${COM_DB_PASSWORD:-}" ] && is_safe_password "$COM_DB_PASSWORD"; then
   DB_PASSWORD="$COM_DB_PASSWORD"
-elif [ -n "$EXISTING_PASSWORD" ]; then
+elif [ -n "$EXISTING_PASSWORD" ] && is_safe_password "$EXISTING_PASSWORD"; then
   DB_PASSWORD="$EXISTING_PASSWORD"
 else
-  DB_PASSWORD="$(tr -dc 'A-Za-z0-9_@#%+=' </dev/urandom | head -c 24)"
+  DB_PASSWORD="$(make_safe_password)"
 fi
 
 log "Database: $DB_NAME"
 log "User: $DB_USER"
 
-CREATED_WITH_UAPI=0
 if command -v uapi >/dev/null 2>&1; then
   log "Trying cPanel UAPI database creation"
   uapi --user="$CPANEL_USER" Mysql create_database name="${DB_NAME#${CPANEL_USER}_}" >/tmp/com-uapi-db.log 2>&1 || true
   uapi --user="$CPANEL_USER" Mysql create_user name="${DB_USER#${CPANEL_USER}_}" password="$DB_PASSWORD" >/tmp/com-uapi-user.log 2>&1 || true
   uapi --user="$CPANEL_USER" Mysql set_privileges_on_database user="$DB_USER" database="$DB_NAME" privileges="ALL PRIVILEGES" >/tmp/com-uapi-priv.log 2>&1 || true
-  CREATED_WITH_UAPI=1
 fi
 
 MYSQL_BIN="$(find_mysql 2>/dev/null || true)"
@@ -92,12 +98,15 @@ if [ -n "$MYSQL_BIN" ]; then
 
   "$MYSQL_BIN" -uroot <<SQL >/tmp/com-mysql-setup.log 2>&1 || true
 CREATE DATABASE IF NOT EXISTS \`$DB_NAME_SQL\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER IF NOT EXISTS '$DB_USER_SQL'@'localhost' IDENTIFIED BY '$DB_PASSWORD_SQL';
-ALTER USER '$DB_USER_SQL'@'localhost' IDENTIFIED BY '$DB_PASSWORD_SQL';
+DROP USER IF EXISTS '$DB_USER_SQL'@'localhost';
+DROP USER IF EXISTS '$DB_USER_SQL'@'127.0.0.1';
+DROP USER IF EXISTS '$DB_USER_SQL'@'%';
+CREATE USER '$DB_USER_SQL'@'localhost' IDENTIFIED BY '$DB_PASSWORD_SQL';
+CREATE USER '$DB_USER_SQL'@'127.0.0.1' IDENTIFIED BY '$DB_PASSWORD_SQL';
+CREATE USER '$DB_USER_SQL'@'%' IDENTIFIED BY '$DB_PASSWORD_SQL';
 GRANT ALL PRIVILEGES ON \`$DB_NAME_SQL\`.* TO '$DB_USER_SQL'@'localhost';
-CREATE USER IF NOT EXISTS '$DB_USER_SQL'@'127.0.0.1' IDENTIFIED BY '$DB_PASSWORD_SQL';
-ALTER USER '$DB_USER_SQL'@'127.0.0.1' IDENTIFIED BY '$DB_PASSWORD_SQL';
 GRANT ALL PRIVILEGES ON \`$DB_NAME_SQL\`.* TO '$DB_USER_SQL'@'127.0.0.1';
+GRANT ALL PRIVILEGES ON \`$DB_NAME_SQL\`.* TO '$DB_USER_SQL'@'%';
 FLUSH PRIVILEGES;
 SQL
 else
