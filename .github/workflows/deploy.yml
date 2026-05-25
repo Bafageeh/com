@@ -1,0 +1,62 @@
+name: Deploy COM
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.COM_SSH_HOST }}
+          username: ${{ secrets.COM_SSH_USER }}
+          key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.COM_SSH_PORT }}
+          script_stop: true
+          script: |
+            set -e
+            PROJECT_PATH="${{ secrets.COM_PROJECT_PATH }}"
+
+            if [ -z "$PROJECT_PATH" ]; then
+              echo "COM_PROJECT_PATH is missing"
+              exit 1
+            fi
+
+            if [ ! -d "$PROJECT_PATH/.git" ]; then
+              echo "Repository is not initialized at $PROJECT_PATH"
+              exit 1
+            fi
+
+            cd "$PROJECT_PATH"
+            git fetch origin main
+            git reset --hard origin/main
+
+            if [ -d "com-api" ]; then
+              cd "$PROJECT_PATH/com-api"
+              composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+              php artisan optimize:clear || true
+              php artisan migrate --force || true
+              php artisan config:cache || true
+              php artisan route:cache || true
+              php artisan view:cache || true
+            fi
+
+            if [ -d "com-mobile" ]; then
+              cd "$PROJECT_PATH/com-mobile"
+              if [ -f package-lock.json ]; then
+                npm ci
+              else
+                npm install
+              fi
+            fi
+
+            chown -R pmsa:pmsa "$PROJECT_PATH" || true
