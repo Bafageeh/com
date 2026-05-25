@@ -13,12 +13,19 @@ jobs:
     steps:
       - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          COM_DB_HOST: ${{ secrets.COM_DB_HOST }}
+          COM_DB_PORT: ${{ secrets.COM_DB_PORT }}
+          COM_DB_DATABASE: ${{ secrets.COM_DB_DATABASE }}
+          COM_DB_USERNAME: ${{ secrets.COM_DB_USERNAME }}
+          COM_DB_PASSWORD: ${{ secrets.COM_DB_PASSWORD }}
         with:
           host: ${{ secrets.COM_SSH_HOST }}
           username: ${{ secrets.COM_SSH_USER }}
           key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
           port: ${{ secrets.COM_SSH_PORT }}
           script_stop: false
+          envs: COM_DB_HOST,COM_DB_PORT,COM_DB_DATABASE,COM_DB_USERNAME,COM_DB_PASSWORD
           script: |
             set +e
             PROJECT_PATH="${{ secrets.COM_PROJECT_PATH }}"
@@ -50,6 +57,21 @@ jobs:
               return 1
             }
 
+            set_env_value() {
+              local key="$1"
+              local value="$2"
+              if [ -z "$value" ]; then
+                return 0
+              fi
+              local escaped
+              escaped=$(printf '%s' "$value" | sed 's/[&/]/\\&/g')
+              if grep -q "^${key}=" .env 2>/dev/null; then
+                sed -i "s/^${key}=.*/${key}=${escaped}/" .env
+              else
+                printf '%s=%s\n' "$key" "$value" >> .env
+              fi
+            }
+
             PHP_BIN="$(find_bin php /usr/local/bin/php /usr/bin/php /opt/cpanel/ea-php83/root/usr/bin/php /opt/cpanel/ea-php82/root/usr/bin/php /opt/cpanel/ea-php81/root/usr/bin/php 2>/dev/null || true)"
             COMPOSER_BIN="$(find_bin composer /usr/local/bin/composer /opt/cpanel/composer/bin/composer /usr/bin/composer 2>/dev/null || true)"
             NPM_BIN="$(find_bin npm /usr/local/bin/npm /usr/bin/npm 2>/dev/null || true)"
@@ -75,8 +97,14 @@ jobs:
               fi
 
               if [ -f .env ]; then
-                grep -q '^APP_NAME=' .env && sed -i 's/^APP_NAME=.*/APP_NAME=COM/' .env || echo 'APP_NAME=COM' >> .env
-                grep -q '^APP_URL=' .env && sed -i 's#^APP_URL=.*#APP_URL=https://com.pm.sa#' .env || echo 'APP_URL=https://com.pm.sa' >> .env
+                set_env_value APP_NAME COM
+                set_env_value APP_URL https://com.pm.sa
+                set_env_value DB_CONNECTION mysql
+                set_env_value DB_HOST "${COM_DB_HOST:-127.0.0.1}"
+                set_env_value DB_PORT "${COM_DB_PORT:-3306}"
+                set_env_value DB_DATABASE "${COM_DB_DATABASE:-}"
+                set_env_value DB_USERNAME "${COM_DB_USERNAME:-}"
+                set_env_value DB_PASSWORD "${COM_DB_PASSWORD:-}"
               fi
 
               mkdir -p routes || true
@@ -96,10 +124,10 @@ jobs:
                 "$PHP_BIN" artisan view:clear || true
                 "$PHP_BIN" artisan route:list | grep health || true
 
-                if grep -q '^DB_DATABASE=' .env 2>/dev/null; then
+                if [ -n "${COM_DB_DATABASE:-}" ] && [ -n "${COM_DB_USERNAME:-}" ]; then
                   "$PHP_BIN" artisan migrate --force || true
                 else
-                  echo "Skipping migrations because DB_DATABASE is not configured"
+                  echo "Skipping migrations because COM_DB_DATABASE or COM_DB_USERNAME is missing"
                 fi
               fi
             else
