@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+vendor/
+
+# Laravel
+com-api/storage/*.key
+com-api/storage/app/private/
+com-api/storage/framework/cache/data/
+com-api/storage/framework/sessions/
+com-api/storage/framework/views/
+com-api/bootstrap/cache/*.php
+
+# Expo / React Native
+com-mobile/.expo/
+com-mobile/dist/
+com-mobile/build/
+com-mobile/android/
+com-mobile/ios/
