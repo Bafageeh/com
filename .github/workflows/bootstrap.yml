@@ -1,0 +1,33 @@
+name: Bootstrap COM
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Bootstrap project on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          COM_PROJECT_PATH: ${{ secrets.COM_PROJECT_PATH }}
+          EXPO_PUBLIC_API_BASE_URL: ${{ secrets.EXPO_PUBLIC_API_BASE_URL }}
+        with:
+          host: ${{ secrets.COM_SSH_HOST }}
+          username: ${{ secrets.COM_SSH_USER }}
+          key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.COM_SSH_PORT }}
+          script_stop: true
+          envs: COM_PROJECT_PATH,EXPO_PUBLIC_API_BASE_URL
+          script: |
+            set -e
+            PROJECT_PATH="${COM_PROJECT_PATH:-/mnt/home-storage/home/pmsa/apps/com}"
+            cd "$PROJECT_PATH"
+            git fetch origin main
+            git reset --hard origin/main
+            chmod +x scripts/bootstrap-com.sh
+            COM_PROJECT_PATH="$PROJECT_PATH" EXPO_PUBLIC_API_BASE_URL="${EXPO_PUBLIC_API_BASE_URL:-https://com.pm.sa/api/v1}" bash scripts/bootstrap-com.sh
