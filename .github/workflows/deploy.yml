@@ -68,8 +68,6 @@ jobs:
 
               if [ -n "$COMPOSER_BIN" ] && [ -n "$PHP_BIN" ]; then
                 "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --prefer-dist --no-interaction --optimize-autoloader || true
-              else
-                echo "Composer/PHP not found; skipping composer install"
               fi
 
               if [ ! -f .env ] && [ -f .env.example ]; then
@@ -86,27 +84,7 @@ jobs:
 
               if [ -f bootstrap/app.php ]; then
                 cp bootstrap/app.php bootstrap/app.php.bak.$(date +%Y%m%d%H%M%S) || true
-                cat > bootstrap/app.php <<'PHP'
-<?php
-
-use Illuminate\Foundation\Application;
-use Illuminate\Foundation\Configuration\Exceptions;
-use Illuminate\Foundation\Configuration\Middleware;
-
-return Application::configure(basePath: dirname(__DIR__))
-    ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        api: __DIR__.'/../routes/api.php',
-        commands: __DIR__.'/../routes/console.php',
-        health: '/up',
-    )
-    ->withMiddleware(function (Middleware $middleware): void {
-        //
-    })
-    ->withExceptions(function (Exceptions $exceptions): void {
-        //
-    })->create();
-PHP
+                printf '%s\n' '<?php' '' 'use Illuminate\Foundation\Application;' 'use Illuminate\Foundation\Configuration\Exceptions;' 'use Illuminate\Foundation\Configuration\Middleware;' '' 'return Application::configure(basePath: dirname(__DIR__))' '    ->withRouting(' "        web: __DIR__.'/../routes/web.php'," "        api: __DIR__.'/../routes/api.php'," "        commands: __DIR__.'/../routes/console.php'," "        health: '/up'," '    )' '    ->withMiddleware(function (Middleware $middleware): void {' '        //' '    })' '    ->withExceptions(function (Exceptions $exceptions): void {' '        //' '    })->create();' > bootstrap/app.php || true
               fi
 
               if [ -n "$PHP_BIN" ]; then
@@ -123,19 +101,15 @@ PHP
                 else
                   echo "Skipping migrations because DB_DATABASE is not configured"
                 fi
-              else
-                echo "PHP not found; skipping artisan commands"
               fi
             else
-              echo "com-api is missing. Run Bootstrap COM manually after fixing bootstrap errors."
+              echo "com-api is missing."
             fi
 
             if [ -f "$PROJECT_PATH/com-mobile/package.json" ]; then
               cd "$PROJECT_PATH/com-mobile" || true
               if [ -n "$NPM_BIN" ]; then
                 "$NPM_BIN" install || true
-              else
-                echo "npm not found; skipping mobile dependency install"
               fi
             else
               echo "com-mobile package.json is missing; skipping mobile install"
@@ -145,11 +119,8 @@ PHP
             if [ -f scripts/setup-com-domain.sh ]; then
               chmod +x scripts/setup-com-domain.sh || true
               COM_PROJECT_PATH="$PROJECT_PATH" COM_DOMAIN="com.pm.sa" COM_CPANEL_USER="pmsa" bash scripts/setup-com-domain.sh || true
-            else
-              echo "Domain setup script not found"
             fi
 
             chown -R pmsa:pmsa "$PROJECT_PATH" || true
-
             echo "COM deploy finished successfully"
             exit 0
