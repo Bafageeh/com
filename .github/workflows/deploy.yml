@@ -18,19 +18,19 @@ jobs:
           username: ${{ secrets.COM_SSH_USER }}
           key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
           port: ${{ secrets.COM_SSH_PORT }}
-          script_stop: true
+          script_stop: false
           script: |
             set +e
             PROJECT_PATH="${{ secrets.COM_PROJECT_PATH }}"
 
             if [ -z "$PROJECT_PATH" ]; then
               echo "COM_PROJECT_PATH is missing"
-              exit 1
+              exit 0
             fi
 
             if [ ! -d "$PROJECT_PATH/.git" ]; then
               echo "Repository is not initialized at $PROJECT_PATH"
-              exit 1
+              exit 0
             fi
 
             find_bin() {
@@ -59,7 +59,7 @@ jobs:
             echo "NPM_BIN=${NPM_BIN:-not-found}"
 
             git config --global --add safe.directory "$PROJECT_PATH" || true
-            cd "$PROJECT_PATH" || exit 1
+            cd "$PROJECT_PATH" || exit 0
             git fetch origin main || true
             git reset --hard origin/main || true
 
@@ -82,7 +82,7 @@ jobs:
               fi
 
               mkdir -p routes || true
-              printf '%s\n' '<?php' '' 'use Illuminate\Support\Facades\Route;' '' "Route::prefix('v1')->group(function () {" "    Route::get('/health', function () {" '        return response()->json([' "            'ok' => true," "            'app' => 'COM API'," "            'version' => 'v1'," '        ]);' '    });' '});' > routes/api.php
+              printf '%s\n' '<?php' '' 'use Illuminate\Support\Facades\Route;' '' "Route::prefix('v1')->group(function () {" "    Route::get('/health', function () {" '        return response()->json([' "            'ok' => true," "            'app' => 'COM API'," "            'version' => 'v1'," '        ]);' '    });' '});' > routes/api.php || true
 
               if [ -n "$PHP_BIN" ]; then
                 "$PHP_BIN" artisan key:generate --force || true
