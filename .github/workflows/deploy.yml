@@ -71,3 +71,13 @@ jobs:
             fi
 
             chown -R pmsa:pmsa "$PROJECT_PATH" || true
+
+            echo "Running cPanel AutoSSL for user pmsa"
+            if [ -x /usr/local/cpanel/bin/autossl_check ]; then
+              /usr/local/cpanel/bin/autossl_check --user pmsa || true
+            else
+              echo "AutoSSL command not found"
+            fi
+
+            echo "Checking HTTPS for com.pm.sa"
+            curl -I --max-time 20 https://com.pm.sa || true
