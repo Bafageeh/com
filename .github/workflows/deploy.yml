@@ -38,6 +38,18 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
+            if [ ! -f "$PROJECT_PATH/com-api/public/index.php" ] || [ ! -f "$PROJECT_PATH/com-mobile/package.json" ]; then
+              echo "Laravel API or Expo mobile app is missing; running bootstrap script"
+              if [ -f "$PROJECT_PATH/scripts/bootstrap-com.sh" ]; then
+                chmod +x "$PROJECT_PATH/scripts/bootstrap-com.sh"
+                COM_PROJECT_PATH="$PROJECT_PATH" EXPO_PUBLIC_API_BASE_URL="${{ secrets.EXPO_PUBLIC_API_BASE_URL }}" bash "$PROJECT_PATH/scripts/bootstrap-com.sh"
+                git fetch origin main
+                git reset --hard origin/main
+              else
+                echo "Bootstrap script not found"
+              fi
+            fi
+
             if [ -d "com-api" ]; then
               cd "$PROJECT_PATH/com-api"
               composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
