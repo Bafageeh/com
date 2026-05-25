@@ -130,6 +130,19 @@ jobs:
                   echo "Skipping migrations because COM_DB_DATABASE or COM_DB_USERNAME is missing"
                 fi
               fi
+
+              cd "$PROJECT_PATH" || true
+              if [ -f scripts/setup-com-admin-schema.sh ]; then
+                chmod +x scripts/setup-com-admin-schema.sh || true
+                COM_PROJECT_PATH="$PROJECT_PATH" COM_APP_USER="pmsa" bash scripts/setup-com-admin-schema.sh || true
+              fi
+
+              cd "$PROJECT_PATH/com-api" || true
+              if [ -n "$PHP_BIN" ]; then
+                "$PHP_BIN" artisan db:seed --class=Database\\Seeders\\ComHostingsSeeder --force || true
+                "$PHP_BIN" artisan optimize:clear || true
+                "$PHP_BIN" artisan route:list | grep -E 'health|dashboard|hostings' || true
+              fi
             else
               echo "com-api is missing."
             fi
