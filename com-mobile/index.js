@@ -970,7 +970,7 @@ const styles = StyleSheet.create({
   },
   topTitleBar: {
     height: 56,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255,255,255,0.90)',
     borderWidth: 0,
     borderRadius: 0,
     marginTop: 0,
@@ -981,7 +981,7 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#12091f',
-    paddingTop: 48,
+    paddingTop: 28,
   },
   hero: {
     marginHorizontal: 0,
