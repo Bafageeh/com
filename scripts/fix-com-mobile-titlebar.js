@@ -3,28 +3,28 @@ const path = 'com-mobile/index.js';
 let s = fs.readFileSync(path, 'utf8');
 
 function replaceHeroBlock(code) {
-  const target = '<View style={styles.hero}>';
-  const start = code.indexOf(target);
-  if (start < 0) return code;
-  let i = start;
-  let depth = 0;
-  let end = -1;
-  while (i < code.length) {
-    const nextOpen = code.indexOf('<View', i);
-    const nextClose = code.indexOf('</View>', i);
-    if (nextClose < 0) break;
-    if (nextOpen >= 0 && nextOpen < nextClose) {
-      depth += 1;
-      i = nextOpen + 5;
-    } else {
-      depth -= 1;
-      i = nextClose + 7;
-      if (depth === 0) { end = i; break; }
-    }
+  const lines = code.split('\n');
+  const start = lines.findIndex((line) => line.includes('<View style={styles.hero}>'));
+  if (start < 0) {
+    console.log('No hero block found; skipping JSX replacement');
+    return code;
   }
-  if (end < 0) throw new Error('Could not find hero block end');
-  const bar = `<View style={styles.topTitleBar}>\n        <Text style={styles.topTitleText}>{pageTitle}</Text>\n      </View>`;
-  return code.slice(0, start) + bar + code.slice(end);
+
+  const end = lines.findIndex((line, index) => index > start && line.includes('{loading ? ('));
+  if (end < 0) {
+    throw new Error('Could not find loading block after hero');
+  }
+
+  const indent = lines[start].match(/^\s*/)[0];
+  const replacement = [
+    `${indent}<View style={styles.topTitleBar}>`,
+    `${indent}  <Text style={styles.topTitleText}>{pageTitle}</Text>`,
+    `${indent}</View>`,
+    '',
+  ];
+
+  lines.splice(start, end - start, ...replacement);
+  return lines.join('\n');
 }
 
 function removeExtraBars(code) {
@@ -68,5 +68,4 @@ s = replaceStyleObject(s, 'topTitleText', `  topTitleText: {
   },`);
 
 fs.writeFileSync(path, s);
-console.log('Fixed COM mobile title bar');
-// trigger repair workflow 2026-05-26
+console.log('Fixed COM mobile title bar with line-based replacement');
