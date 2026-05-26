@@ -538,19 +538,7 @@ function App() {
 
   function renderDashboard() {
     const entries = Object.entries(totals);
-    if (entries.length === 0) {
-      return <Text style={styles.empty}>لا توجد ملخصات بعد</Text>;
-    }
 
-    return entries.map(([key, value]) => (
-      <View key={key} style={styles.metricCard}>
-        <Text style={styles.metricLabel}>{key}</Text>
-        <Text style={styles.metricValue}>{String(value ?? 0)}</Text>
-      </View>
-    ));
-  }
-
-  function renderExpenses() {
     return (
       <>
         <View style={styles.summaryCard}>
@@ -587,6 +575,24 @@ function App() {
             </View>
           </View>
         </View>
+
+        {entries.length === 0 ? (
+          <Text style={styles.empty}>لا توجد ملخصات أخرى بعد</Text>
+        ) : (
+          entries.map(([key, value]) => (
+            <View key={key} style={styles.metricCard}>
+              <Text style={styles.metricLabel}>{key}</Text>
+              <Text style={styles.metricValue}>{String(value ?? 0)}</Text>
+            </View>
+          ))
+        )}
+      </>
+    );
+  }
+
+  function renderExpenses() {
+    return (
+      <>
 
         <View style={styles.fixedCard}>
           <View style={styles.cardHead}>
