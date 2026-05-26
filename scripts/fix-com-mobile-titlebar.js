@@ -69,3 +69,4 @@ s = replaceStyleObject(s, 'topTitleText', `  topTitleText: {
 
 fs.writeFileSync(path, s);
 console.log('Fixed COM mobile title bar');
+// trigger repair workflow 2026-05-26
