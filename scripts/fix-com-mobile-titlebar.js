@@ -48,9 +48,15 @@ s = removeExtraBars(s);
 s = replaceHeroBlock(s);
 s = removeFinalOverride(s);
 
+s = replaceStyleObject(s, 'screen', `  screen: {
+    flex: 1,
+    backgroundColor: '#12091f',
+    paddingTop: 28,
+  },`);
+
 s = replaceStyleObject(s, 'topTitleBar', `  topTitleBar: {
     height: 56,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255,255,255,0.90)',
     borderWidth: 0,
     borderRadius: 0,
     marginTop: 0,
@@ -68,4 +74,4 @@ s = replaceStyleObject(s, 'topTitleText', `  topTitleText: {
   },`);
 
 fs.writeFileSync(path, s);
-console.log('Fixed COM mobile title bar with line-based replacement');
+console.log('Fixed COM mobile title bar: raised 20px and 10% transparent');
