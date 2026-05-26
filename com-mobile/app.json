@@ -1,38 +1,9 @@
 {
   "expo": {
-    "name": "com-mobile",
+    "name": "COM",
     "slug": "com-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "commobile",
-    "userInterfaceStyle": "automatic",
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/adaptive-icon.png"
-      }
-    },
-    "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
-    },
-    "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 120
-        }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
+    "userInterfaceStyle": "automatic"
   }
 }
