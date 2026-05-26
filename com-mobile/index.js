@@ -478,25 +478,8 @@ function App() {
     <View style={styles.screen}>
       <StatusBar style="light" />
 
-      <View style={styles.hero}>
-        <View style={styles.heroGlowOne} />
-        <View style={styles.heroGlowTwo} />
-        <View style={styles.heroTop}>
-          <View style={styles.brandBadge}>
-            <Text style={styles.brandBadgeText}>{pageIcon}</Text>
-          </View>
-          <View style={styles.heroText}>
-            <Text style={styles.appName}>COM</Text>
-            <Text style={styles.pageTitle}>{pageTitle}</Text>
-            <Text style={styles.pageHint}>اسحب للأسفل للتحديث</Text>
-          </View>
-        </View>
-
-        <View style={styles.quickStats}>
-          <MiniStat label="مصروف سنوي" value={money(annualExpensesTotal)} />
-          <MiniStat label="استضافات" value={hostingsCount} />
-          <MiniStat label="مصروفات" value={expensesCount} />
-        </View>
+      <View style={styles.topTitleBar}>
+        <Text style={styles.topTitleText}>{pageTitle}</Text>
       </View>
 
       {loading ? (
@@ -978,6 +961,23 @@ function DropField({ label, value, onPress }) {
 }
 
 const styles = StyleSheet.create({
+  topTitleText: {
+    color: '#150b2e',
+    fontSize: 23,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 32,
+  },
+  topTitleBar: {
+    height: 56,
+    backgroundColor: '#ffffff',
+    borderWidth: 0,
+    borderRadius: 0,
+    marginTop: 0,
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   screen: {
     flex: 1,
     backgroundColor: '#12091f',
@@ -1693,70 +1693,7 @@ const styles = StyleSheet.create({
   dropdownTextActive: {
     color: '#fff',
   },
-  // ===== FINAL TOP BAR OVERRIDE =====
-  hero: {
-    height: 0,
-    maxHeight: 0,
-    minHeight: 0,
-    marginTop: 0,
-    marginBottom: 0,
-    marginHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingHorizontal: 0,
-    overflow: 'hidden',
-    opacity: 0,
-  },
-  heroTop: {
-    display: 'none',
-  },
-  heroText: {
-    display: 'none',
-  },
-  heroIcon: {
-    display: 'none',
-  },
-  heroSubtitle: {
-    display: 'none',
-  },
-  heroGlowOne: {
-    display: 'none',
-  },
-  heroGlowTwo: {
-    display: 'none',
-  },
-  quickStats: {
-    display: 'none',
-  },
-  miniStat: {
-    display: 'none',
-  },
-  miniValue: {
-    display: 'none',
-  },
-  miniLabel: {
-    display: 'none',
-  },
-  fixedWhiteTitleBar: {
-    height: 56,
-    backgroundColor: '#ffffff',
-    borderWidth: 0,
-    borderRadius: 0,
-    marginTop: 0,
-    marginBottom: 10,
-    paddingHorizontal: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    elevation: 20,
-  },
-  fixedWhiteTitleText: {
-    color: '#150b2e',
-    fontSize: 23,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 32,
-  },
+
 
 });
 
