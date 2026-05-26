@@ -152,13 +152,13 @@ function App() {
       {loading ? (
         <View style={styles.loading}><ActivityIndicator /><Text style={styles.loadingText}>جاري التحميل...</Text></View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={[styles.content, active === 'hostings' && styles.contentCompact]}>
           {active === 'dashboard' ? (
             Object.keys(totals).length === 0 ? <Text style={styles.empty}>لا توجد ملخصات بعد</Text> : Object.entries(totals).map(([key, value]) => <MetricCard key={key} label={key} value={String(value ?? 0)} />)
           ) : rows.length === 0 ? (
             <Text style={styles.empty}>لا توجد بيانات بعد</Text>
           ) : (
-            rows.map((row) => <RecordCard key={row.id} row={row} onEdit={() => editRecord(row)} onDelete={() => deleteRecord(row)} />)
+            rows.map((row) => <RecordCard key={row.id} row={row} compact={active === 'hostings'} onEdit={() => editRecord(row)} onDelete={() => deleteRecord(row)} />)
           )}
         </ScrollView>
       )}
@@ -197,13 +197,13 @@ function MetricCard({ label, value }) {
   return <View style={styles.card}><Text style={styles.cardLabel}>{label}</Text><Text style={styles.cardValue}>{value}</Text></View>;
 }
 
-function RecordCard({ row, onEdit, onDelete }) {
+function RecordCard({ row, onEdit, onDelete, compact = false }) {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, compact && styles.compactCard]}>
       {Object.entries(row).slice(0, 10).map(([key, value]) => (
-        <View key={key} style={styles.row}><Text style={styles.rowKey}>{key}</Text><Text style={styles.rowValue}>{String(value ?? '-')}</Text></View>
+        <View key={key} style={[styles.row, compact && styles.compactRow]}><Text style={styles.rowKey}>{key}</Text><Text style={styles.rowValue}>{String(value ?? '-')}</Text></View>
       ))}
-      <View style={styles.actions}>
+      <View style={[styles.actions, compact && styles.compactActions]}>
         <Pressable onPress={onDelete} style={styles.secondary}><Text style={styles.secondaryText}>حذف</Text></Pressable>
         <Pressable onPress={onEdit} style={styles.primary}><Text style={styles.primaryText}>تعديل</Text></Pressable>
       </View>
@@ -229,14 +229,18 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { marginTop: 10, color: '#64748b' },
   content: { padding: 16, gap: 12 },
+  contentCompact: { paddingHorizontal: 12, paddingTop: 10, gap: 8 },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 40 },
   card: { backgroundColor: '#fff', borderRadius: 22, padding: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  compactCard: { borderRadius: 16, padding: 10 },
   cardLabel: { color: '#64748b', fontSize: 14, textAlign: 'right' },
   cardValue: { color: '#0f172a', fontSize: 24, fontWeight: '900', marginTop: 8, textAlign: 'right' },
   row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingVertical: 5 },
+  compactRow: { paddingVertical: 2, gap: 8 },
   rowKey: { color: '#64748b', fontSize: 12 },
   rowValue: { color: '#0f172a', fontWeight: '700', flex: 1, textAlign: 'right' },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  compactActions: { marginTop: 8 },
   primary: { flex: 1, backgroundColor: '#0f172a', paddingVertical: 12, borderRadius: 15, alignItems: 'center' },
   primaryText: { color: '#fff', fontWeight: '900' },
   secondary: { flex: 1, backgroundColor: '#e2e8f0', paddingVertical: 12, borderRadius: 15, alignItems: 'center' },
