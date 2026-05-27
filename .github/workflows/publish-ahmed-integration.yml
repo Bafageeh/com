@@ -1,0 +1,38 @@
+name: Publish Ahmed Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'api/integrations/ahmed/summary/**'
+      - 'api/v1/integrations/ahmed/summary/**'
+      - '.github/workflows/publish-ahmed-integration.yml'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish files on COM server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.COM_SSH_HOST }}
+          username: ${{ secrets.COM_SSH_USER }}
+          key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.COM_SSH_PORT }}
+          script: |
+            set -e
+            PROJECT_PATH="${{ secrets.COM_PROJECT_PATH }}"
+            if [ -z "$PROJECT_PATH" ]; then
+              echo "COM_PROJECT_PATH is missing"
+              exit 1
+            fi
+            cd "$PROJECT_PATH"
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p com-api/public/api
+            cp -a api/. com-api/public/api/
+            find com-api/public/api/integrations/ahmed/summary -maxdepth 1 -type f -print
+            find com-api/public/api/v1/integrations/ahmed/summary -maxdepth 1 -type f -print
+            echo "Ahmed integration published"
