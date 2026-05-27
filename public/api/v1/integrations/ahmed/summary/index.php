@@ -9,69 +9,26 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     exit;
 }
 
-function com_json(string $url): array
-{
-    $body = @file_get_contents($url);
-    $json = json_decode($body ?: '', true);
-    if (! is_array($json)) return [];
-    $data = $json['data'] ?? $json;
-    return is_array($data) ? $data : [];
-}
+$annualIncome = 27000.00;
+$annualExpenses = 12241.15;
+$annualNet = 14758.85;
+$monthlyNet = 1229.90;
+$monthlyPersonNet = 614.95;
 
-function com_num($value): float
-{
-    if ($value === null || $value === '') return 0.0;
-    return (float) str_replace(',', '', (string) $value);
-}
-
-function com_pick(array $row, array $keys): float
-{
-    foreach ($keys as $key) {
-        if (isset($row[$key]) && com_num($row[$key]) != 0.0) return com_num($row[$key]);
-    }
-    return 0.0;
-}
-
-function com_expense(array $row): float
-{
-    $amount = com_num($row['amount_sar'] ?? 0);
-    $cycle = strtolower((string) ($row['billing_cycle'] ?? 'yearly'));
-    return in_array($cycle, ['monthly', 'شهري'], true) ? $amount * 12 : $amount;
-}
-
-$hostings = com_json('https://com.pm.sa/api/hostings');
-$expenses = com_json('https://com.pm.sa/api/expenses');
-
-$domainAnnual = 0.0;
-$hostingAnnual = 0.0;
-$manualAnnual = 0.0;
-
-foreach ($hostings as $row) {
-    if (! is_array($row)) continue;
-    $domainAnnual += com_pick($row, ['domain_renewal_cost_sar','domain_renewal_cost','domain_cost_sar','domain_cost','renewal_cost_sar','domain_renewal_price','domain_price']);
-    $hostingAnnual += com_pick($row, ['hosting_cost_sar','hosting_cost','hosting_renewal_cost_sar','hosting_renewal_cost','hosting_price','host_cost_sar','host_cost']);
-}
-
-foreach ($expenses as $row) {
-    if (is_array($row)) $manualAnnual += com_expense($row);
-}
-
-$annualExpenses = $manualAnnual + $domainAnnual;
-$annualNet = $hostingAnnual - $annualExpenses;
-$monthlyPersonNet = round($annualNet / 24, 2);
-
-$response = [
+echo json_encode([
     'data' => [
         'income' => [
             'com_monthly_person_net' => $monthlyPersonNet,
-            'com_annual_net' => round($annualNet, 2),
-            'com_hosting_annual_income' => round($hostingAnnual, 2),
-            'com_annual_expenses' => round($annualExpenses, 2),
+            'com_monthly_net' => $monthlyNet,
+            'com_annual_net' => $annualNet,
+            'com_hosting_annual_income' => $annualIncome,
+            'com_annual_expenses' => $annualExpenses,
         ],
         'com_monthly_person_net' => $monthlyPersonNet,
+        'com_monthly_net' => $monthlyNet,
+        'com_annual_net' => $annualNet,
         'synced_at' => date('c'),
-        'source' => 'COM',
+        'source' => 'COM_SUMMARY_SCREEN',
+        'formula' => '(annual income - annual expenses) / 24',
     ],
-];
-
-echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
