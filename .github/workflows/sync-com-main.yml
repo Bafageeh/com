@@ -1,0 +1,30 @@
+name: Sync COM Main
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'public/api/v1/integrations/ahmed/summary/**'
+      - '.github/workflows/sync-com-main.yml'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync server repository
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.COM_SSH_HOST }}
+          username: ${{ secrets.COM_SSH_USER }}
+          key: ${{ secrets.COM_SSH_PRIVATE_KEY }}
+          port: ${{ secrets.COM_SSH_PORT }}
+          script: |
+            set -e
+            PROJECT_PATH="${{ secrets.COM_PROJECT_PATH }}"
+            cd "$PROJECT_PATH"
+            git fetch origin main
+            git reset --hard origin/main
+            echo "COM synced to latest main"
+            php -r "echo file_exists('public/api/v1/integrations/ahmed/summary/index.php') ? 'v1 endpoint exists' : 'missing'; echo PHP_EOL;"
