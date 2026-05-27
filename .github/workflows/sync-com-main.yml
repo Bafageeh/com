@@ -27,4 +27,26 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             echo "COM synced to latest main"
-            php -r "echo file_exists('public/api/v1/integrations/ahmed/summary/index.php') ? 'v1 endpoint exists' : 'missing'; echo PHP_EOL;"
+
+            SRC="$PROJECT_PATH/public/api/v1/integrations/ahmed/summary/index.php"
+            echo "Source endpoint: $SRC"
+            test -f "$SRC"
+
+            for ROOT in \
+              "$PROJECT_PATH/public" \
+              "$PROJECT_PATH/com-api/public" \
+              "/home/pmsa/public_html/com.pm.sa" \
+              "/home/pmsa/public_html/com" \
+              "/home/pmsa/public_html/apps/com" \
+              "/home/pmsa/public_html"; do
+              if [ -d "$ROOT" ]; then
+                TARGET="$ROOT/api/v1/integrations/ahmed/summary"
+                mkdir -p "$TARGET"
+                cp "$SRC" "$TARGET/index.php"
+                echo "patched $TARGET/index.php"
+              fi
+            done
+
+            echo "searching old endpoint text"
+            grep -R "Unable to load COM Ahmed summary" /home/pmsa/public_html "$PROJECT_PATH" 2>/dev/null || true
+            echo "done"
