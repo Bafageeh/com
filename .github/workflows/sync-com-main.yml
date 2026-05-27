@@ -42,8 +42,13 @@ jobs:
               if [ -d "$ROOT" ]; then
                 TARGET="$ROOT/api/v1/integrations/ahmed/summary"
                 mkdir -p "$TARGET"
-                cp "$SRC" "$TARGET/index.php"
-                echo "patched $TARGET/index.php"
+                DEST="$TARGET/index.php"
+                if [ "$(realpath -m "$SRC")" = "$(realpath -m "$DEST")" ]; then
+                  echo "already current $DEST"
+                else
+                  cp "$SRC" "$DEST"
+                  echo "patched $DEST"
+                fi
               fi
             done
 
